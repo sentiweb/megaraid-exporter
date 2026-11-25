@@ -264,6 +264,12 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 
 // ---------------------------------------------------------------------------
 
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
 func main() {
 	listen := flag.String("web.listen-address", "127.0.0.1:9333", "Listening address")
 	path := flag.String("web.telemetry-path", "/metrics", "web path on which expose metrics")
@@ -271,7 +277,13 @@ func main() {
 	controller := flag.String("controller", "all", "Controller selection")
 	disk := flag.String("disk", "all", "Disk Selection")
 	timeout := flag.Duration("timeout", 30*time.Second, "timeout to run storcli tool")
+	versionCommand := flag.Bool("version", false, "Print version and exit")
 	flag.Parse()
+
+	if *versionCommand {
+		fmt.Printf("megaraid-exporter %s, commit %s, built at %s", version, commit, date)
+		return
+	}
 
 	registry := prometheus.NewRegistry()
 	registry.MustRegister(NewExporter(
@@ -280,9 +292,10 @@ func main() {
 	mux := http.NewServeMux()
 	mux.Handle(*path, promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, `<html><body><a href="%s">Metrics</a></body></html>`, *path)
+		fmt.Fprintf(w, `<html><body><a href="%s">Metrics</a>Megaraid Exporter %s (%s)</body></html>`, *path, version, commit)
 	})
 
+	log.Printf("megaraid-exporter %s, commit %s, built at %s", version, commit, date)
 	log.Printf("Listening at http://%s%s", *listen, *path)
 	log.Fatal(http.ListenAndServe(*listen, mux))
 }
